@@ -56,7 +56,10 @@ class GameModel: ObservableObject {
     
     // 處理移動邏輯
     func moveTiles(direction: Direction) {
-        guard !isGameOver else { return }  // 如果遊戲結束則不允許移動
+        guard !isGameOver else { return }
+
+        let originalGrid = grid  // 保存原始狀態
+        
         switch direction {
         case .up:
             moveUp()
@@ -68,10 +71,13 @@ class GameModel: ObservableObject {
             moveRight()
         }
         
-        // 每次移動後添加新tile並檢查遊戲結束條件
-        addRandomTile()
-        checkGameOver()
+        // 只有當網格內容有變動時才新增方塊
+        if !gridsAreEqual(grid, originalGrid) {
+            addRandomTile()
+            checkGameOver()
+        }
     }
+
     
     // 向上移動
     private func moveUp() {
@@ -183,6 +189,17 @@ class GameModel: ObservableObject {
         }
     }
     
+    private func gridsAreEqual(_ a: [[Int]], _ b: [[Int]]) -> Bool {
+        for row in 0..<gridSize {
+            for col in 0..<gridSize {
+                if a[row][col] != b[row][col] {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
     // 檢查遊戲結束或勝利
     func checkGameOver() {
         if hasWon {

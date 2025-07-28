@@ -54,7 +54,7 @@ struct ContentView: View {
             
             Spacer()
             
-            // 顯示重啟遊戲按鈕
+            // 顯示重啟遊戲按鈕123
             Button("Restart") {
                 game.restart()
             }
