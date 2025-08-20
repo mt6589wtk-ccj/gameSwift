@@ -6,22 +6,18 @@ enum MoveDirection {
 }
 
 class GameModel: ObservableObject {
-    // 4x4 網格
     @Published var grid: [[Int]]
-    
-    // 遊戲結束
     @Published var isGameOver: Bool
-    
-    // 遊戲勝利
     @Published var hasWon: Bool
-    
-    // 得分
     @Published var score: Int
     
     let gridSize: Int = 4
     
-    // 儲存歷史狀態，最多五筆
+    // 儲存最多5步歷史
     private var history: [(grid: [[Int]], score: Int, isGameOver: Bool, hasWon: Bool)] = []
+    
+    // 本地排行榜
+    var leaderboard = LeaderboardManager()
     
     init() {
         self.grid = Array(repeating: Array(repeating: 0, count: gridSize), count: gridSize)
@@ -45,7 +41,6 @@ class GameModel: ObservableObject {
         startGame()
     }
     
-    // 將目前狀態儲存到歷史堆疊
     func saveState() {
         let currentGrid = grid.map { $0 }
         history.append((grid: currentGrid, score: score, isGameOver: isGameOver, hasWon: hasWon))
@@ -54,12 +49,10 @@ class GameModel: ObservableObject {
         }
     }
     
-    // 讓外部檢查是否能回上一動作（UI用）
     var canUndo: Bool {
         return !history.isEmpty
     }
     
-    // 回上一動作
     func undo() {
         guard let previousState = history.popLast() else { return }
         grid = previousState.grid
@@ -68,7 +61,6 @@ class GameModel: ObservableObject {
         hasWon = previousState.hasWon
     }
     
-    // 新增隨機 2 或 4
     func addRandomTile() {
         var emptyTiles: [(Int, Int)] = []
         for row in 0..<gridSize {
@@ -83,9 +75,7 @@ class GameModel: ObservableObject {
         }
     }
     
-    // 移動邏輯
     func moveTiles(direction: MoveDirection) {
-        // 儲存當前狀態，用於undo
         saveState()
         
         var moved = false
@@ -148,12 +138,10 @@ class GameModel: ObservableObject {
             addRandomTile()
             checkGameState()
         } else {
-            // 如果沒有移動，剛剛存的狀態不算，撤回
-            _ = history.popLast()
+            _ = history.popLast() // 無動作撤銷儲存狀態
         }
     }
     
-    // 合併一列陣列，回傳新陣列及得分
     func mergeLine(line: [Int]) -> ([Int], Int) {
         var newLine = line.filter { $0 != 0 }
         var addedScore = 0
@@ -174,11 +162,9 @@ class GameModel: ObservableObject {
         while newLine.count < gridSize {
             newLine.append(0)
         }
-        
         return (newLine, addedScore)
     }
     
-    // 檢查遊戲結束狀態
     func checkGameState() {
         for row in 0..<gridSize {
             for col in 0..<gridSize {
@@ -205,5 +191,6 @@ class GameModel: ObservableObject {
             }
         }
         isGameOver = true
+        leaderboard.addScore(score) // 遊戲結束存分數
     }
 }

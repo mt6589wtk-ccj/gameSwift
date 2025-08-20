@@ -2,23 +2,21 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var game = GameModel()
+    @State private var showLeaderboard = false
 
     var body: some View {
         VStack {
             Spacer()
 
-            // 顯示標題
             Text("2048")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
 
-            // 顯示分數
             Text("得分：\(game.score)")
                 .font(.headline)
                 .padding(.bottom, 10)
 
-            // 顯示遊戲結束或勝利的訊息
             if game.isGameOver {
                 Text("Game Over")
                     .font(.title)
@@ -31,7 +29,6 @@ struct ContentView: View {
                     .padding()
             }
 
-            // 遊戲網格
             GridView(game: game)
                 .gesture(
                     DragGesture(minimumDistance: 30)
@@ -39,7 +36,6 @@ struct ContentView: View {
                             if game.isGameOver || game.hasWon {
                                 return
                             }
-
                             if abs(value.translation.width) > abs(value.translation.height) {
                                 if value.translation.width > 0 {
                                     game.moveTiles(direction: .right)
@@ -58,15 +54,21 @@ struct ContentView: View {
 
             Spacer()
 
-            // 回上一動作按鈕
             Button("回上一動作") {
                 game.undo()
             }
             .font(.title)
             .padding()
-            .disabled(!game.canUndo) // 沒有歷史時禁用
+            .disabled(!game.canUndo)
 
-            // 重新開始按鈕
+            Button("查看排行榜") {
+                showLeaderboard = true
+            }
+            .padding()
+            .sheet(isPresented: $showLeaderboard) {
+                LeaderboardView(leaderboard: game.leaderboard)
+            }
+
             Button("Restart") {
                 game.restart()
             }
@@ -79,8 +81,6 @@ struct ContentView: View {
     }
 }
 
-
-// GridView 簡單示範（依你的原本程式碼調整）
 struct GridView: View {
     @ObservedObject var game: GameModel
     let gridSize: Int = 4
@@ -136,6 +136,32 @@ struct TileView: View {
 
     func textColor(_ value: Int) -> Color {
         return value > 4 ? .white : .black
+    }
+}
+
+struct LeaderboardView: View {
+    @ObservedObject var leaderboard: LeaderboardManager
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            List(leaderboard.leaderboard.indices, id: \.self) { index in
+                let entry = leaderboard.leaderboard[index]
+                HStack {
+                    Text("\(index + 1). \(entry.name)")
+                    Spacer()
+                    Text("\(entry.score)")
+                }
+            }
+            .navigationTitle("排行榜")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("返回") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 
