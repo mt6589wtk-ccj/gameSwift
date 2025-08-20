@@ -12,6 +12,11 @@ struct ContentView: View {
                 .fontWeight(.bold)
                 .padding()
             
+            // 顯示分數
+            Text("得分：\(game.score)")
+                .font(.headline)
+                .padding(.bottom, 10)
+
             // 顯示遊戲結束或勝利的訊息
             if game.isGameOver {
                 Text("Game Over")

@@ -1,22 +1,27 @@
 import Foundation
 import Combine
 
+enum MoveDirection {
+    case up, down, left, right
+}
+
 class GameModel: ObservableObject {
-    // 遊戲的 4x4 格子，每個格子儲存一個數字
+    // 4x4 網格
     @Published var grid: [[Int]]
-    
-    // 遊戲是否結束
+    // 遊戲結束
     @Published var isGameOver: Bool
-    // 遊戲是否勝利
+    // 遊戲勝利
     @Published var hasWon: Bool
+    // 得分
+    @Published var score: Int
     
-    let gridSize: Int = 4 // 4x4的網格
+    let gridSize: Int = 4
     
     init() {
-        // 初始化 grid 為 4x4 大小，預設為 0
         self.grid = Array(repeating: Array(repeating: 0, count: gridSize), count: gridSize)
         self.isGameOver = false
         self.hasWon = false
+        self.score = 0
         startGame()
     }
     
@@ -24,19 +29,18 @@ class GameModel: ObservableObject {
     func startGame() {
         self.isGameOver = false
         self.hasWon = false
+        self.score = 0
         grid = Array(repeating: Array(repeating: 0, count: gridSize), count: gridSize)
         addRandomTile()
         addRandomTile()
     }
     
-    // 重啟遊戲
+    // 重啟
     func restart() {
-        self.isGameOver = false
-        self.hasWon = false
         startGame()
     }
     
-    // 隨機在格子中放置 2 或 4
+    // 新增隨機 2 或 4
     func addRandomTile() {
         var emptyTiles: [(Int, Int)] = []
         for row in 0..<gridSize {
@@ -46,200 +50,109 @@ class GameModel: ObservableObject {
                 }
             }
         }
-        
-        if !emptyTiles.isEmpty {
-            let randomTile = emptyTiles.randomElement()!
-            let (row, col) = randomTile
-            grid[row][col] = [2, 4].randomElement()!
-        }
+        guard !emptyTiles.isEmpty else { return }
+        let (row, col) = emptyTiles.randomElement()!
+        grid[row][col] = [2, 2, 2, 4].randomElement()! // 75% 2, 25% 4
     }
     
-    // 處理移動邏輯
-    func moveTiles(direction: Direction) {
-        guard !isGameOver else { return }
-
-        let originalGrid = grid  // 保存原始狀態
+    // 主要移動與合併邏輯
+    func moveTiles(direction: MoveDirection) {
+        if isGameOver || hasWon { return }
+        var moved = false
+        var addedScore = 0
         
         switch direction {
-        case .up:
-            moveUp()
-        case .down:
-            moveDown()
         case .left:
-            moveLeft()
+            for i in 0..<gridSize {
+                let (newLine, score) = combineTiles(line: grid[i])
+                if grid[i] != newLine {
+                    moved = true
+                    grid[i] = newLine
+                }
+                addedScore += score
+            }
         case .right:
-            moveRight()
+            for i in 0..<gridSize {
+                let reversed = Array(grid[i].reversed())
+                let (combined, score) = combineTiles(line: reversed)
+                let newLine = Array(combined.reversed())
+                if grid[i] != newLine {
+                    moved = true
+                    grid[i] = newLine
+                }
+                addedScore += score
+            }
+        case .up:
+            for col in 0..<gridSize {
+                var column = (0..<gridSize).map { grid[$0][col] }
+                let (newColumn, score) = combineTiles(line: column)
+                for row in 0..<gridSize {
+                    if grid[row][col] != newColumn[row] {
+                        moved = true
+                        grid[row][col] = newColumn[row]
+                    }
+                }
+                addedScore += score
+            }
+        case .down:
+            for col in 0..<gridSize {
+                var column = (0..<gridSize).map { grid[$0][col] }.reversed()
+                let (combined, score) = combineTiles(line: Array(column))
+                let newColumn = Array(combined.reversed())
+                for row in 0..<gridSize {
+                    if grid[row][col] != newColumn[row] {
+                        moved = true
+                        grid[row][col] = newColumn[row]
+                    }
+                }
+                addedScore += score
+            }
         }
-        
-        // 只有當網格內容有變動時才新增方塊
-        if !gridsAreEqual(grid, originalGrid) {
+        if moved {
+            self.score += addedScore
             addRandomTile()
-            checkGameOver()
-        }
-    }
-
-    
-    // 向上移動
-    private func moveUp() {
-        for col in 0..<gridSize {
-            var newColumn: [Int] = grid.map { $0[col] }.filter { $0 != 0 }
-            var mergedColumn: [Int] = []
-            
-            var i = 0
-            while i < newColumn.count {
-                if i + 1 < newColumn.count && newColumn[i] == newColumn[i + 1] {
-                    mergedColumn.append(newColumn[i] * 2)
-                    i += 2
-                } else {
-                    mergedColumn.append(newColumn[i])
-                    i += 1
-                }
-            }
-            
-            // 填充剩餘的零
-            while mergedColumn.count < gridSize {
-                mergedColumn.append(0)
-            }
-            
-            // 更新列到網格
-            for row in 0..<gridSize {
-                grid[row][col] = mergedColumn[row]
-            }
+            checkGameState()
         }
     }
     
-    // 向下移動
-    private func moveDown() {
-        for col in 0..<gridSize {
-            var newColumn: [Int] = grid.map { $0[col] }.filter { $0 != 0 }.reversed()
-            var mergedColumn: [Int] = []
-            
-            var i = 0
-            while i < newColumn.count {
-                if i + 1 < newColumn.count && newColumn[i] == newColumn[i + 1] {
-                    mergedColumn.append(newColumn[i] * 2)
-                    i += 2
-                } else {
-                    mergedColumn.append(newColumn[i])
-                    i += 1
-                }
-            }
-            
-            // 填充剩餘的零
-            while mergedColumn.count < gridSize {
-                mergedColumn.append(0)
-            }
-            
-            // 更新列到網格
-            for row in 0..<gridSize {
-                grid[row][col] = mergedColumn.reversed()[row]
-            }
-        }
-    }
-    
-    // 向左移動
-    private func moveLeft() {
-        for row in 0..<gridSize {
-            var newRow: [Int] = grid[row].filter { $0 != 0 }
-            var mergedRow: [Int] = []
-            
-            var i = 0
-            while i < newRow.count {
-                if i + 1 < newRow.count && newRow[i] == newRow[i + 1] {
-                    mergedRow.append(newRow[i] * 2)
-                    i += 2
-                } else {
-                    mergedRow.append(newRow[i])
-                    i += 1
-                }
-            }
-            
-            // 填充剩餘的零
-            while mergedRow.count < gridSize {
-                mergedRow.append(0)
-            }
-            
-            grid[row] = mergedRow
-        }
-    }
-    
-    // 向右移動
-    private func moveRight() {
-        for row in 0..<gridSize {
-            var newRow: [Int] = grid[row].filter { $0 != 0 }.reversed()
-            var mergedRow: [Int] = []
-            
-            var i = 0
-            while i < newRow.count {
-                if i + 1 < newRow.count && newRow[i] == newRow[i + 1] {
-                    mergedRow.append(newRow[i] * 2)
-                    i += 2
-                } else {
-                    mergedRow.append(newRow[i])
-                    i += 1
-                }
-            }
-            
-            // 填充剩餘的零
-            while mergedRow.count < gridSize {
-                mergedRow.append(0)
-            }
-            
-            grid[row] = mergedRow.reversed()
-        }
-    }
-    
-    private func gridsAreEqual(_ a: [[Int]], _ b: [[Int]]) -> Bool {
-        for row in 0..<gridSize {
-            for col in 0..<gridSize {
-                if a[row][col] != b[row][col] {
-                    return false
-                }
-            }
-        }
-        return true
-    }
-
-    // 檢查遊戲結束或勝利
-    func checkGameOver() {
-        if hasWon {
-            return  // 如果已經獲勝，則不再檢查結束
-        }
-        
-        // 檢查是否有2048
-        for row in 0..<gridSize {
-            for col in 0..<gridSize {
-                if grid[row][col] == 2048 {
+    // 合併 tiles 並計算得分
+    func combineTiles(line: [Int]) -> ([Int], Int) {
+        var newLine = line.filter { $0 != 0 }
+        var addedScore = 0
+        var idx = 0
+        while idx < newLine.count - 1 {
+            if newLine[idx] == newLine[idx + 1] {
+                newLine[idx] *= 2
+                addedScore += newLine[idx]
+                newLine[idx + 1] = 0
+                // 判斷是否勝利
+                if newLine[idx] == 2048 {
                     hasWon = true
-                    return
                 }
+                idx += 2
+            } else {
+                idx += 1
             }
         }
-        
-        // 檢查是否有可以移動或合併的格子
-        var canMove = false
+        newLine = newLine.filter { $0 != 0 }
+        while newLine.count < gridSize {
+            newLine.append(0)
+        }
+        return (newLine, addedScore)
+    }
+    
+    // 檢查遊戲狀態
+    func checkGameState() {
+        // 判斷有無空格
         for row in 0..<gridSize {
             for col in 0..<gridSize {
-                if grid[row][col] == 0 {
-                    canMove = true
-                }
-                if col + 1 < gridSize && grid[row][col] == grid[row][col + 1] {
-                    canMove = true
-                }
-                if row + 1 < gridSize && grid[row][col] == grid[row + 1][col] {
-                    canMove = true
-                }
+                if grid[row][col] == 0 { return }
+                if row > 0 && grid[row][col] == grid[row-1][col] { return }
+                if row < gridSize-1 && grid[row][col] == grid[row+1][col] { return }
+                if col > 0 && grid[row][col] == grid[row][col-1] { return }
+                if col < gridSize-1 && grid[row][col] == grid[row][col+1] { return }
             }
         }
-        
-        // 如果沒有空格且無法合併，遊戲結束
-        if !canMove {
-            isGameOver = true
-        }
+        isGameOver = true
     }
-}
-
-// 用於移動的方向
-enum Direction {
-    case up, down, left, right
 }
