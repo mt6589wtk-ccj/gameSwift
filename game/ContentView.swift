@@ -2,16 +2,17 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var game = GameModel()
-    
+
     var body: some View {
         VStack {
             Spacer()
+
             // 顯示標題
             Text("2048")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
-            
+
             // 顯示分數
             Text("得分：\(game.score)")
                 .font(.headline)
@@ -29,18 +30,16 @@ struct ContentView: View {
                     .foregroundColor(.green)
                     .padding()
             }
-            
-            // 顯示遊戲網格
+
+            // 遊戲網格
             GridView(game: game)
                 .gesture(
                     DragGesture(minimumDistance: 30)
                         .onEnded { value in
-                            // 如果遊戲結束或已經贏了，不再處理手勢
                             if game.isGameOver || game.hasWon {
                                 return
                             }
-                            
-                            // 判斷是水平滑動還是垂直滑動
+
                             if abs(value.translation.width) > abs(value.translation.height) {
                                 if value.translation.width > 0 {
                                     game.moveTiles(direction: .right)
@@ -56,48 +55,69 @@ struct ContentView: View {
                             }
                         }
                 )
-            
+
             Spacer()
-            
-            // 顯示重啟遊戲按鈕123
+
+            // 回上一動作按鈕
+            Button("回上一動作") {
+                game.undo()
+            }
+            .font(.title)
+            .padding()
+            .disabled(!game.canUndo) // 沒有歷史時禁用
+
+            // 重新開始按鈕
             Button("Restart") {
                 game.restart()
             }
             .font(.title)
             .padding()
-            .disabled(game.isGameOver == false && game.hasWon == false)  // 禁用按鈕，如果遊戲還在進行中
+            .disabled(game.isGameOver == false && game.hasWon == false)
+            .background(Color(UIColor.systemGray6))
+            .edgesIgnoringSafeArea(.all)
         }
-        .background(Color(UIColor.systemGray6))
-        .edgesIgnoringSafeArea(.all)
     }
 }
 
+
+// GridView 簡單示範（依你的原本程式碼調整）
 struct GridView: View {
     @ObservedObject var game: GameModel
-    
     let gridSize: Int = 4
-    
+
     var body: some View {
         VStack(spacing: 10) {
             ForEach(0..<gridSize, id: \.self) { row in
                 HStack(spacing: 10) {
                     ForEach(0..<gridSize, id: \.self) { col in
-                        // 顯示每個格子的數字
-                        Text(self.game.grid[row][col] == 0 ? "" : "\(self.game.grid[row][col])")
-                            .frame(width: 70, height: 70)
-                            .background(self.cellColor(self.game.grid[row][col]))
-                            .cornerRadius(10)
-                            .font(.system(size: 30, weight: .bold))
-                            .foregroundColor(self.textColor(self.game.grid[row][col]))
+                        TileView(value: game.grid[row][col])
                     }
                 }
             }
         }
-        .padding(20)
+        .padding()
     }
-    
-    // 根據數字大小設置顏色
-    private func cellColor(_ value: Int) -> Color {
+}
+
+struct TileView: View {
+    let value: Int
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(colorForValue(value))
+                .cornerRadius(8)
+                .frame(width: 70, height: 70)
+            if value > 0 {
+                Text("\(value)")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(textColor(value))
+            }
+        }
+    }
+
+    func colorForValue(_ value: Int) -> Color {
         switch value {
         case 2: return .yellow
         case 4: return .orange
@@ -113,9 +133,8 @@ struct GridView: View {
         default: return .gray
         }
     }
-    
-    // 根據數字的大小選擇文本顏色
-    private func textColor(_ value: Int) -> Color {
+
+    func textColor(_ value: Int) -> Color {
         return value > 4 ? .white : .black
     }
 }
