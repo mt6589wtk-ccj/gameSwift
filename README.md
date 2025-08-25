@@ -15,7 +15,8 @@
 操作簡單，支援觸控拖曳（手勢）移動方塊（ContentView.swift）
 
 截圖
-（建議：放一張遊戲畫面截圖）
+<img width="454" height="912" alt="截圖 2025-08-25 上午9 57 35" src="https://github.com/user-attachments/assets/03a6e6a8-70a0-4acf-bf6a-b842e7869527" />
+
 
 安裝方式
 安裝 Xcode（建議 Xcode 13 以上版本）
