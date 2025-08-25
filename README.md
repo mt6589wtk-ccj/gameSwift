@@ -16,6 +16,8 @@
 
 截圖
 <img width="454" height="912" alt="截圖 2025-08-25 上午9 57 35" src="https://github.com/user-attachments/assets/03a6e6a8-70a0-4acf-bf6a-b842e7869527" />
+<img width="464" height="930" alt="截圖 2025-08-25 上午10 57 53" src="https://github.com/user-attachments/assets/ea7e2c56-b33d-4f24-b027-ace373c650df" />
+<img width="456" height="926" alt="截圖 2025-08-25 上午10 58 41" src="https://github.com/user-attachments/assets/7e18446a-947d-4f27-acee-49f543b6ccf9" />
 
 
 安裝方式
